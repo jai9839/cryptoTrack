@@ -28,12 +28,25 @@ _Note: The backend is hosted on a free Render instance, so the initial server re
 
 ## Features
 
-- User authentication (register, login, logout)
+- User authentication (register, login, logout) with **phone OTP verification** (international numbers)
+- **Security dashboard** for admins — login history, failed attempts, user activity logs
 - Real-time cryptocurrency prices (via CoinGecko API)
 - Search cryptocurrency
 - Add/remove coins to portfolio and watchlist
 - Portfolio performance analytics (profit/loss, allocation chart, top gainers, top losers)
 - Export your portfolio report in both PDF and CSV formats.
+- AI-powered crypto assistant with portfolio insights, risk analysis, and price predictions
+- AI investment recommendations, market sentiment, and voice command support
+- **AI Investment Advisor** — portfolio risk, diversification, and personalized suggestions
+- **Paper Trading Simulator** — ₹1,00,000 virtual balance, buy/sell, P/L, leaderboard
+- **Market Sentiment Analyzer** — bullish/bearish signals from live price data
+- **Voice-Controlled Assistant** — hands-free crypto queries
+- **Crypto Scam Detector** — flags suspicious volume, spikes, and low-cap risks
+- **Dashboard AI Chatbot** — instant answers on portfolio and coins
+- **Live Crypto Heatmap** — green/red market visualization
+- **Learning Section** — blockchain, Bitcoin, staking basics for beginners
+- **AI Notifications** — price and portfolio alerts (browser notifications)
+- **Blockchain Transaction Visualizer** — chart-based flow view
 - View portfolio values in different fiat currencies (via Frankfurter API)
 - Dark mode support with theme persistence
 
@@ -130,6 +143,12 @@ MONGODB_URI="mongodb://127.0.0.1:27017/cryptotrack"
 PORT=3000
 CLIENT="http://localhost:5173"
 JWT_SECRET="YOUR_JWT_SECRET"
+OTP_DEV_MODE=true
+ADMIN_USERNAMES=admin
+# Optional — real SMS via Twilio:
+# TWILIO_ACCOUNT_SID=
+# TWILIO_AUTH_TOKEN=
+# TWILIO_PHONE_NUMBER=
 ```
 
 #### Run the Backend Server
@@ -171,4 +190,4 @@ The application should now be running at **http://localhost:5173**.
 
 ## Contact
 
-For any questions or suggestions, please reach out to [joy.mascarenhas@outlook.com](mailto:joy.mascarenhas@outlook.com).
+For any questions or suggestions, please reach out to [ak4379499@gmail.com](mailto:ak4379499@gmail.com).

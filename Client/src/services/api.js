@@ -18,13 +18,25 @@ api.interceptors.request.use((config) => {
 });
 
 export const authAPI = {
-	login: async (username, password) => {
-		const response = await api.post("/login", { username, password });
+	sendOtp: async (payload) => {
+		const response = await api.post("/auth/otp/send", payload);
 		return response.data;
 	},
 
-	register: async (username, password) => {
-		const response = await api.post("/register", { username, password });
+	login: async (payload) => {
+		const response = await api.post("/auth/login", payload);
+		return response.data;
+	},
+
+	register: async (payload) => {
+		const response = await api.post("/auth/register", payload);
+		return response.data;
+	},
+};
+
+export const securityAPI = {
+	getAdminOverview: async () => {
+		const response = await api.get("/auth/admin/overview");
 		return response.data;
 	},
 };

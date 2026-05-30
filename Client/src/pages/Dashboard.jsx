@@ -10,6 +10,11 @@ import useCoins from "../hooks/useCoins";
 import useChart from "../hooks/useChart";
 import PieChartComponent from "../components/PieChartComponent";
 import BarChartComponent from "../components/BarChartComponent";
+import AIInvestmentAdvisor from "../components/AIInvestmentAdvisor";
+import DashboardAIChat from "../components/DashboardAIChat";
+import NotificationCenter from "../components/NotificationCenter";
+import useTopCoins from "../hooks/useTopCoins";
+import Heatmap from "../components/Heatmap";
 
 const Dashboard = ({
 	watchlist,
@@ -25,6 +30,7 @@ const Dashboard = ({
 	const [action, setAction] = useState("");
 	const { currency, formatCurrency } = useCurrency();
 	const { coins, loading, error } = useCoins(portfolio);
+	const { coins: marketCoins, loading: marketLoading } = useTopCoins();
 	const chart = useChart(portfolio, coins);
 
 	const handleToggleForm = (coin, actionType) => {
@@ -126,6 +132,16 @@ const Dashboard = ({
 						</div>
 					)}
 				</div>
+			</div>
+			<div className="max-w-9xl mx-auto grid gap-6 mt-8 xl:grid-cols-2">
+				<AIInvestmentAdvisor portfolio={portfolio} coins={coins} />
+				<NotificationCenter coins={coins.length ? coins : marketCoins} portfolio={portfolio} />
+			</div>
+			<div className="max-w-9xl mx-auto mt-8">
+				<Heatmap coins={marketLoading ? [] : marketCoins} />
+			</div>
+			<div className="max-w-9xl mx-auto mt-8">
+				<DashboardAIChat coins={coins.length ? coins : marketCoins.slice(0, 20)} portfolio={portfolio} />
 			</div>
 			<div className="mt-10 mx-auto overflow-x-auto [scrollbar-width:none]">
 				<PortfolioTable

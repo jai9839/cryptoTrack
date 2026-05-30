@@ -10,6 +10,9 @@ import Header from "./components/Header";
 import Menu from "./components/Menu";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
+import AI from "./pages/AI";
+import Features from "./pages/Features";
+import AdminSecurity from "./pages/AdminSecurity";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Watchlist from "./pages/Watchlist";
@@ -199,55 +202,85 @@ const App = () => {
 						/>
 					}
 				/>
-				<Route
-					path="/dashboard"
-					element={
-						isAuthenticated ? (
-							<Dashboard
-								watchlist={watchlist}
-								toggleWatchlist={toggleWatchlist}
-								portfolio={portfolio}
-								addCoin={addCoin}
-								form={form}
-								toggleForm={toggleForm}
-								coinData={coinData}
-								removeCoin={removeCoin}
-							/>
-						) : (
-							<Navigate to="/login" />
-						)
-					}
-				/>
-				<Route
-					path="/watchlist"
-					element={
-						isAuthenticated ? (
-							<Watchlist
-								watchlist={watchlist}
-								toggleForm={toggleForm}
-								toggleWatchlist={toggleWatchlist}
-								addCoin={addCoin}
-								form={form}
-								coinData={coinData}
-							/>
-						) : (
-							<Navigate to="/login" />
-						)
-					}
-				/>
-				<Route
-					path="/login"
-					element={
-						isAuthenticated ? (
-							<Navigate to="/dashboard" />
-						) : (
-							<Login toggleForm={toggleForm} form={form} />
-						)
-					}
-				/>
-				<Route
-					path="/signup"
-					element={
+                <Route
+                    path="/dashboard"
+                    element={
+                        isAuthenticated ? (
+                            <Dashboard
+                                watchlist={watchlist}
+                                toggleWatchlist={toggleWatchlist}
+                                portfolio={portfolio}
+                                addCoin={addCoin}
+                                form={form}
+                                toggleForm={toggleForm}
+                                coinData={coinData}
+                                removeCoin={removeCoin}
+                            />
+                        ) : (
+                            <Navigate to="/login" />
+                        )
+                    }
+                />
+                <Route
+                    path="/watchlist"
+                    element={
+                        isAuthenticated ? (
+                            <Watchlist
+                                watchlist={watchlist}
+                                toggleForm={toggleForm}
+                                toggleWatchlist={toggleWatchlist}
+                                addCoin={addCoin}
+                                form={form}
+                                coinData={coinData}
+                            />
+                        ) : (
+                            <Navigate to="/login" />
+                        )
+                    }
+                />
+                <Route
+                    path="/ai"
+                    element={
+                        isAuthenticated ? (
+                            <AI portfolio={portfolio} />
+                        ) : (
+                            <Navigate to="/login" />
+                        )
+                    }
+                />
+                <Route
+                    path="/features"
+                    element={
+                        isAuthenticated ? (
+                            <Features portfolio={portfolio} />
+                        ) : (
+                            <Navigate to="/login" />
+                        )
+                    }
+                />
+                <Route
+                    path="/admin/security"
+                    element={
+                        isAuthenticated ? (
+                            <AdminSecurity />
+                        ) : (
+                            <Navigate to="/login" />
+                        )
+                    }
+                />
+                <Route
+                    path="/login"
+                    element={
+                        isAuthenticated ? (
+                            <Navigate to="/dashboard" />
+                        ) : (
+                            <Login toggleForm={toggleForm} form={form} />
+                        )
+                    }
+                />
+                <Route
+                    path="/signup"
+                    element={
 						isAuthenticated ? (
 							<Navigate to="/dashboard" />
 						) : (

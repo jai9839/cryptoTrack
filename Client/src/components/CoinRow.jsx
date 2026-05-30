@@ -35,15 +35,12 @@ const CoinRow = ({ coin, isStarred, toggleWatchlist, toggleForm }) => {
 				{formatCurrency(coin.current_price * currency[1], 6)}
 			</td>
 			<td className={`px-6 py-4 font-medium ${color}`}>
-				{coin.price_change_percentage_24h
-	? coin.price_change_percentage_24h.toFixed(2)
-	: "0"}
-%
+				{coin.price_change_percentage_24h != null
+					? coin.price_change_percentage_24h.toFixed(2)
+					: "0.00"}%
 			</td>
 			<td className="px-6 py-4 font-medium text-gray-800 dark:text-white">
-				{coin.market_cap
-	? formatCurrency((coin.market_cap * currency[1]).toFixed(2), 6)
-	: "0"}
+				{formatCurrency((Number(coin.market_cap) || 0) * currency[1], 6)}
 			</td>
 			<td className="px-6 py-4">
 				<div className="flex items-center gap-2">

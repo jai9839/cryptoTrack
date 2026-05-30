@@ -14,6 +14,32 @@ const UsersSchema = new mongoose.Schema({
 		required: true,
 	},
 
+	phoneE164: {
+		type: String,
+		unique: true,
+		sparse: true,
+		trim: true,
+	},
+
+	countryCode: {
+		type: String,
+		default: "",
+	},
+
+	phoneVerified: {
+		type: Boolean,
+		default: false,
+	},
+
+	role: {
+		type: String,
+		enum: ["user", "admin"],
+		default: "user",
+	},
+
+	lastLoginAt: { type: Date },
+	lastLoginIp: { type: String, default: "" },
+
 	watchlist: {
 		type: [String],
 		required: true,

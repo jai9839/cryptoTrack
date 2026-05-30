@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { COINGECKO_TOP_COINS_API } from "../constants";
+
+import { BACKEND_URL as API_URL } from "../constants";
 
 export default function useTopCoins() {
 	const [coins, setCoins] = useState([]);
@@ -10,9 +11,11 @@ export default function useTopCoins() {
 			setLoading(true);
 			setError(null);
 			try {
-				const response = await fetch(COINGECKO_TOP_COINS_API);
+				const response = await fetch(
+					`${API_URL}/coingecko/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=7d`
+				);
 				if (!response.ok) {
-					throw new Error("An Error Occured");
+					throw new Error("Failed to load market data");
 				}
 				const data = await response.json();
 				setCoins(data);

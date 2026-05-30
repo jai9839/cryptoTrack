@@ -1,73 +1,180 @@
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const compression = require("compression");
 const db = require("./db");
 require("dotenv").config();
-const jwt = require("jsonwebtoken");
 const User = require("./models/Users");
 const PORT = process.env.PORT || 3000;
 const app = express();
 
+app.use(helmet());
+app.use(compression());
 app.use(
 	cors({
-		origin: process.env.CLIENT || "https://cryptotrack-ultimez.vercel.app",
+		origin: (origin, callback) => {
+			const allowedOrigins = [
+				process.env.CLIENT,
+				"http://localhost:5173",
+				"http://127.0.0.1:5173",
+				"http://localhost:5174",
+				"http://127.0.0.1:5174",
+			];
+
+			if (!origin || allowedOrigins.includes(origin)) {
+				callback(null, true);
+			} else {
+				callback(new Error("Not allowed by CORS"));
+			}
+		},
 		credentials: true,
 	})
 );
 
 app.use(express.json());
 const passport = require("./auth");
+const securityRoutes = require("./routes/securityRoutes");
+const { logUserActivity } = require("./middleware/activityLogger");
+const { getClientMeta } = require("./middleware/securityMiddleware");
+
+app.set("trust proxy", 1);
 app.use(passport.initialize());
+
+app.use((req, res, next) => {
+	req.clientMeta = getClientMeta(req);
+	next();
+});
+
+app.use("/auth", securityRoutes);
 
 app.get("/", (req, res) => {
 	return res.send("API is running");
 });
 
-app.post("/register", async (req, res) => {
-	const { username, password } = req.body;
+app.get("/currency", async (req, res) => {
 	try {
-		const user = await User.findOne({ username });
-		if (user) {
-			return res.status(400).json({ Error: "User Already Exists" });
+		const response = await fetch("https://api.frankfurter.app/latest?from=USD");
+		if (!response.ok) {
+			return res.status(response.status).json({ error: "Failed to fetch currency rates" });
 		}
 
-		const newUser = new User({ username, password });
-		const response = await newUser.save();
-		return res
-			.status(200)
-			.json({ message: "User Registered Successfully" });
+		const data = await response.json();
+		return res.json(data);
 	} catch (err) {
-		return res.status(500).json(err);
+		return res.status(500).json({ error: err.message });
 	}
 });
 
-app.post("/login", (req, res, next) => {
-	passport.authenticate("local", { session: false }, (err, user, info) => {
-		if (err) {
-			return res.status(500).json({ error: "Authentication error" });
-		}
-		if (!user) {
-			return res.status(400).json({ error: "Invalid credentials" });
-		}
+const BINANCE_BASE = "https://api.binance.com/api/v3";
+const COINGECKO_BASE = "https://api.coingecko.com/api/v3";
 
-		const payload = { id: user._id, username: user.username };
-		const token = jwt.sign(payload, process.env.JWT_SECRET, {
-			expiresIn: "24h",
-		});
+async function fetchBinance(path, res) {
+	try {
+		const response = await fetch(`${BINANCE_BASE}${path}`);
+		const data = await response.json();
+		if (!response.ok) {
+			return res.status(response.status).json({ error: data || "Binance request failed" });
+		}
+		return res.json(data);
+	} catch (err) {
+		return res.status(500).json({ error: err.message });
+	}
+}
 
-		res.status(200).json({
-			message: "Login successful",
-			token: token,
-			user: {
-				id: user._id,
-				username: user.username,
-			},
-		});
-	})(req, res, next);
+async function fetchCoinGecko(path, res) {
+	try {
+		const response = await fetch(`${COINGECKO_BASE}${path}`);
+		const data = await response.json();
+		if (!response.ok) {
+			return res.status(response.status).json({ error: data || "CoinGecko request failed" });
+		}
+		res.set("Cache-Control", "public, max-age=60");
+		return res.json(data);
+	} catch (err) {
+		return res.status(500).json({ error: err.message });
+	}
+}
+
+app.get("/binance/ticker24hr", (req, res) => {
+	const symbol = (req.query.symbol || "BTCUSDT").toUpperCase();
+	return fetchBinance(`/ticker/24hr?symbol=${symbol}`, res);
 });
+
+app.get("/binance/depth", (req, res) => {
+	const symbol = (req.query.symbol || "BTCUSDT").toUpperCase();
+	const limit = Math.min(Math.max(Number(req.query.limit) || 100, 5), 500);
+	return fetchBinance(`/depth?symbol=${symbol}&limit=${limit}`, res);
+});
+
+app.get("/binance/klines", (req, res) => {
+	const symbol = (req.query.symbol || "BTCUSDT").toUpperCase();
+	const interval = req.query.interval || "1m";
+	const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 500);
+	return fetchBinance(`/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`, res);
+});
+
+app.get("/coingecko/coins/markets", (req, res) => {
+	const ids = req.query.ids ? `&ids=${encodeURIComponent(req.query.ids)}` : "";
+	const page = Number(req.query.page) || 1;
+	const perPage = Math.min(Math.max(Number(req.query.per_page) || 100, 1), 250);
+	return fetchCoinGecko(
+		`/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${perPage}&page=${page}&sparkline=false&price_change_percentage=7d${ids}`,
+		res
+	);
+});
+
+app.get("/coingecko/coins/:id", (req, res) => {
+	const id = encodeURIComponent(req.params.id);
+	const localization = req.query.localization === "false" ? "false" : "true";
+	const tickers = req.query.tickers === "false" ? "false" : "true";
+	return fetchCoinGecko(
+		`/coins/${id}?localization=${localization}&tickers=${tickers}&market_data=true&community_data=false&developer_data=false&sparkline=false`,
+		res
+	);
+});
+
+const cryptoData = require("./cryptoData");
+
+app.get("/cryptos", (req, res) => {
+	const { ids, q } = req.query;
+	let list = cryptoData;
+
+	if (ids) {
+		const requestedIds = ids
+			.split(",")
+			.map((id) => id.trim().toLowerCase());
+		list = list.filter((coin) => requestedIds.includes(coin.id.toLowerCase()));
+	}
+
+	if (q) {
+		const normalized = q.toLowerCase();
+		list = list.filter(
+			(coin) =>
+				coin.name.toLowerCase().includes(normalized) ||
+				coin.symbol.toLowerCase().includes(normalized) ||
+				coin.id.toLowerCase().includes(normalized)
+		);
+	}
+
+	return res.json(list);
+});
+
+app.get("/cryptos/:id", (req, res) => {
+	const coin = cryptoData.find((item) => item.id === req.params.id.toLowerCase());
+	if (!coin) {
+		return res.status(404).json({ error: "Coin not found" });
+	}
+	return res.json(coin);
+});
+
+const protectedAuth = [
+	passport.authenticate("jwt", { session: false }),
+	logUserActivity,
+];
 
 app.get(
 	"/watchlist",
-	passport.authenticate("jwt", { session: false }),
+	...protectedAuth,
 	async (req, res) => {
 		try {
 			const userId = req.user._id;
@@ -78,14 +185,14 @@ app.get(
 
 			return res.json({ watchlist: user.watchlist });
 		} catch (err) {
-			return res.json(500).json(err);
+			return res.status(500).json({ error: err.message || err });
 		}
 	}
 );
 
 app.get(
 	"/portfolio",
-	passport.authenticate("jwt", { session: false }),
+	...protectedAuth,
 	async (req, res) => {
 		try {
 			const userId = req.user._id;
@@ -96,14 +203,14 @@ app.get(
 
 			return res.json(user.portfolio);
 		} catch (err) {
-			return res.json(500).json(err);
+			return res.status(500).json({ error: err.message || err });
 		}
 	}
 );
 
 app.put(
 	"/watchlist/add",
-	passport.authenticate("jwt", { session: false }),
+	...protectedAuth,
 	async (req, res) => {
 		const userId = req.user._id;
 		const coin = req.body.coin;
@@ -127,7 +234,7 @@ app.put(
 
 app.put(
 	"/watchlist/remove",
-	passport.authenticate("jwt", { session: false }),
+	...protectedAuth,
 	async (req, res) => {
 		const userId = req.user._id;
 		const coin = req.body.coin;
@@ -151,7 +258,7 @@ app.put(
 
 app.put(
 	"/portfolio/update",
-	passport.authenticate("jwt", { session: false }),
+	...protectedAuth,
 	async (req, res) => {
 		const userId = req.user._id;
 		const { coin, coinData } = req.body;
@@ -228,4 +335,11 @@ app.put(
 	}
 );
 
-app.listen(PORT);
+app.use((err, req, res, next) => {
+	console.error(err);
+	res.status(500).json({ error: "Internal server error" });
+});
+
+app.listen(PORT, () => {
+	console.log(`Server is running on port ${PORT}`);
+});
