@@ -4,9 +4,19 @@ const helmet = require("helmet");
 const compression = require("compression");
 const db = require("./db");
 require("dotenv").config();
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
 const User = require("./models/Users");
 const PORT = process.env.PORT || 3000;
 const app = express();
+
+let razorpayInstance = null;
+if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+	razorpayInstance = new Razorpay({
+		key_id: process.env.RAZORPAY_KEY_ID,
+		key_secret: process.env.RAZORPAY_KEY_SECRET,
+	});
+}
 
 app.use(helmet());
 app.use(compression());
@@ -331,6 +341,149 @@ app.put(
 			return res.status(200).json(updatedUser.portfolio);
 		} catch (err) {
 			return res.status(500).json(err.message);
+		}
+	}
+);
+
+// Wallet Endpoints
+app.get(
+	"/wallet",
+	...protectedAuth,
+	async (req, res) => {
+		try {
+			const user = await User.findById(req.user._id);
+			if (!user) {
+				return res.status(404).json({ error: "User not found" });
+			}
+			return res.json({
+				balance: user.walletBalance || 0,
+				transactions: user.transactions || [],
+				isMockMode: !razorpayInstance,
+				razorpayKeyId: process.env.RAZORPAY_KEY_ID || ""
+			});
+		} catch (err) {
+			return res.status(500).json({ error: err.message });
+		}
+	}
+);
+
+app.post(
+	"/wallet/deposit/mock",
+	...protectedAuth,
+	async (req, res) => {
+		try {
+			const { amount, method } = req.body;
+			if (!amount || isNaN(amount) || amount <= 0) {
+				return res.status(400).json({ error: "Invalid deposit amount" });
+			}
+
+			const user = await User.findById(req.user._id);
+			if (!user) {
+				return res.status(404).json({ error: "User not found" });
+			}
+
+			const transaction = {
+				type: "deposit",
+				amount: Number(amount),
+				status: "success",
+				paymentId: `mock_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+				method: method || "Simulated",
+				createdAt: new Date()
+			};
+
+			user.walletBalance = (user.walletBalance || 0) + Number(amount);
+			user.transactions.unshift(transaction);
+			await user.save();
+
+			return res.json({
+				message: "Mock deposit successful",
+				balance: user.walletBalance,
+				transactions: user.transactions
+			});
+		} catch (err) {
+			return res.status(500).json({ error: err.message });
+		}
+	}
+);
+
+app.post(
+	"/wallet/deposit/order",
+	...protectedAuth,
+	async (req, res) => {
+		try {
+			const { amount } = req.body;
+			if (!amount || isNaN(amount) || amount <= 0) {
+				return res.status(400).json({ error: "Invalid deposit amount" });
+			}
+
+			if (!razorpayInstance) {
+				return res.status(400).json({
+					error: "Razorpay is not configured. Please use mock deposit or configure credentials.",
+					isMockMode: true
+				});
+			}
+
+			const options = {
+				amount: Math.round(Number(amount) * 100), // Razorpay accepts in paise
+				currency: "INR",
+				receipt: `receipt_wallet_${Date.now()}`,
+			};
+
+			const order = await razorpayInstance.orders.create(options);
+			return res.json({
+				success: true,
+				order
+			});
+		} catch (err) {
+			return res.status(500).json({ error: err.message });
+		}
+	}
+);
+
+app.post(
+	"/wallet/deposit/verify",
+	...protectedAuth,
+	async (req, res) => {
+		try {
+			const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amount } = req.body;
+
+			if (!razorpayInstance) {
+				return res.status(400).json({ error: "Razorpay is not configured." });
+			}
+
+			const hmac = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET);
+			hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+			const generated_signature = hmac.digest("hex");
+
+			if (generated_signature !== razorpay_signature) {
+				return res.status(400).json({ error: "Transaction verification failed. Invalid signature." });
+			}
+
+			const user = await User.findById(req.user._id);
+			if (!user) {
+				return res.status(404).json({ error: "User not found" });
+			}
+
+			const transaction = {
+				type: "deposit",
+				amount: Number(amount),
+				status: "success",
+				paymentId: razorpay_payment_id,
+				method: "Razorpay",
+				createdAt: new Date()
+			};
+
+			user.walletBalance = (user.walletBalance || 0) + Number(amount);
+			user.transactions.unshift(transaction);
+			await user.save();
+
+			return res.json({
+				message: "Payment verified and wallet credited successfully",
+				balance: user.walletBalance,
+				transactions: user.transactions
+			});
+		} catch (err) {
+			return res.status(500).json({ error: err.message });
 		}
 	}
 );

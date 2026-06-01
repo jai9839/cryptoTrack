@@ -63,6 +63,44 @@ const UsersSchema = new mongoose.Schema({
 
 		default: {},
 	},
+
+	walletBalance: {
+		type: Number,
+		default: 0,
+		required: true,
+	},
+
+	transactions: {
+		type: [{
+			type: {
+				type: String,
+				enum: ["deposit", "withdrawal"],
+				required: true,
+			},
+			amount: {
+				type: Number,
+				required: true,
+			},
+			status: {
+				type: String,
+				enum: ["success", "pending", "failed"],
+				default: "success",
+			},
+			paymentId: {
+				type: String,
+				default: "",
+			},
+			method: {
+				type: String,
+				default: "Simulated",
+			},
+			createdAt: {
+				type: Date,
+				default: Date.now,
+			},
+		}],
+		default: [],
+	},
 });
 
 UsersSchema.pre("save", async function (next) {

@@ -43,6 +43,9 @@ const Menu = ({ handleLogout }) => {
                     <NavLink to="/watchlist" className={({ isActive }) => getLinkClass(isActive)}>
                         Watchlist
                     </NavLink>
+                    <NavLink to="/wallet" className={({ isActive }) => getLinkClass(isActive)}>
+                        Wallet
+                    </NavLink>
                     <button
                         onClick={handleLogout}
                         className="p-2 w-full text-white bg-blue-600 hover:bg-blue-700 font-medium"

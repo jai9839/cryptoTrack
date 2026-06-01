@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
@@ -6,10 +7,42 @@ import { useAuth } from "../context/AuthContext";
 import BrightnessMediumIcon from "@mui/icons-material/BrightnessMedium";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import useTheme from "../hooks/useTheme";
+import { useCurrency } from "../context/CurrencyContext";
+import { walletAPI } from "../services/api";
 
 const Header = ({ menu, toggleMenu, handleLogout }) => {
 	const { isAuthenticated, user } = useAuth();
 	const { theme, setTheme } = useTheme();
+	const { formatCurrency, currency } = useCurrency();
+	const [balance, setBalance] = useState(0);
+
+	useEffect(() => {
+		const fetchBalance = async () => {
+			try {
+				const data = await walletAPI.get();
+				setBalance(data.balance);
+			} catch (err) {
+				console.error("Error fetching wallet balance:", err);
+			}
+		};
+
+		if (isAuthenticated) {
+			fetchBalance();
+		}
+
+		const handleWalletUpdate = (e) => {
+			if (e.detail && typeof e.detail.balance === "number") {
+				setBalance(e.detail.balance);
+			} else {
+				fetchBalance();
+			}
+		};
+
+		window.addEventListener("wallet-update", handleWalletUpdate);
+		return () => {
+			window.removeEventListener("wallet-update", handleWalletUpdate);
+		};
+	}, [isAuthenticated]);
 
 	return (
 		<div className="bg-white shadow-md h-16 flex justify-between items-center px-4 select-none z-40 sticky top-0 dark:bg-gray-800 dark:border-b dark:border-gray-800">
@@ -95,6 +128,19 @@ const Header = ({ menu, toggleMenu, handleLogout }) => {
 							}
 						>
 							Watchlist
+						</NavLink>
+
+						<NavLink
+							to="/wallet"
+							className={({ isActive }) =>
+								`rounded-sm px-3 py-2 text-sm font-medium ${
+									isActive
+										? "bg-blue-200 text-blue-700 dark:bg-blue-700/20 dark:text-gray-100"
+										: "dark:text-gray-300 dark:hover:text-white dark:hover:bg-blue-500/10 text-gray-700 hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
+								}`
+							}
+						>
+							💳 Wallet ({formatCurrency(balance * (currency[1] || 1))})
 						</NavLink>
 
 						<CurrencySelector />

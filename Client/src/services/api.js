@@ -70,4 +70,26 @@ export const watchlistAPI = {
 	},
 };
 
+export const walletAPI = {
+	get: async () => {
+		const response = await api.get("/wallet");
+		return response.data;
+	},
+
+	depositMock: async (amount, method) => {
+		const response = await api.post("/wallet/deposit/mock", { amount, method });
+		return response.data;
+	},
+
+	createOrder: async (amount) => {
+		const response = await api.post("/wallet/deposit/order", { amount });
+		return response.data;
+	},
+
+	verifyPayment: async (paymentDetails) => {
+		const response = await api.post("/wallet/deposit/verify", paymentDetails);
+		return response.data;
+	},
+};
+
 export default api;

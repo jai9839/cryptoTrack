@@ -16,6 +16,7 @@ import AdminSecurity from "./pages/AdminSecurity";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Watchlist from "./pages/Watchlist";
+import Wallet from "./pages/Wallet";
 import { AnimatePresence } from "motion/react";
 import { useAuth } from "./context/AuthContext";
 import { portfolioAPI, watchlistAPI } from "./services/api";
@@ -263,6 +264,16 @@ const App = () => {
                     element={
                         isAuthenticated ? (
                             <AdminSecurity />
+                        ) : (
+                            <Navigate to="/login" />
+                        )
+                    }
+                />
+                <Route
+                    path="/wallet"
+                    element={
+                        isAuthenticated ? (
+                            <Wallet />
                         ) : (
                             <Navigate to="/login" />
                         )
